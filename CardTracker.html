@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bakunawa vs Tribesmen - Card Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: #fff;
+            min-height: 100vh;
+            padding: 10px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+            border: 2px solid #ffd700;
+        }
+
+        .header h1 {
+            font-size: clamp(1.5rem, 4vw, 2.5rem);
+            color: #ffd700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            font-size: clamp(0.9rem, 2.5vw, 1.1rem);
+            color: #b8b8b8;
+        }
+
+        .faction-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .faction-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .faction-btn.bakunawa {
+            background: linear-gradient(45deg, #1e3c72, #2a5298);
+            color: white;
+        }
+
+        .faction-btn.tribesmen {
+            background: linear-gradient(45deg, #8b4513, #cd853f);
+            color: white;
+        }
+
+        .faction-btn.active {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+            border: 2px solid #ffd700;
+        }
+
+        .cards-container {
+            display: none;
+        }
+
+        .cards-container.active {
+            display: block;
+        }
+
+        .card-category {
+            margin-bottom: 25px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 15px;
+            padding: 15px;
+            border: 1px solid rgba(255,215,0,0.3);
+        }
+
+        .category-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            font-size: clamp(1.1rem, 3vw, 1.4rem);
+            font-weight: bold;
+        }
+
+        .category-icon {
+            font-size: 1.5em;
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+        }
+
+        .card {
+            background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+            border-radius: 12px;
+            padding: 15px;
+            border: 2px solid #444;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.4);
+            border-color: #ffd700;
+        }
+
+        .card.crossed-out {
+            opacity: 0.4;
+            transform: scale(0.95);
+            filter: grayscale(100%);
+        }
+
+        .card.crossed-out::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                linear-gradient(45deg, transparent 40%, #ff4444 45%, #ff4444 55%, transparent 60%),
+                linear-gradient(-45deg, transparent 40%, #ff4444 45%, #ff4444 55%, transparent 60%);
+            pointer-events: none;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+
+        .card-name {
+            font-size: clamp(0.9rem, 2.5vw, 1.1rem);
+            font-weight: bold;
+            color: #ffd700;
+            flex: 1;
+            line-height: 1.2;
+        }
+
+        .card-stats {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .energy-cost {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            background: radial-gradient(circle, #ffd700, #ffed4e, #ffd700);
+            border-radius: 50%;
+            font-weight: bold;
+            color: #1a1a1a;
+            font-size: 14px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3), inset 0 1px 2px rgba(255,255,255,0.3);
+        }
+
+        .attack-power {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            background: radial-gradient(circle, #ff4444, #ff6666, #ff4444);
+            border-radius: 50%;
+            font-weight: bold;
+            color: white;
+            font-size: 14px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3), inset 0 1px 2px rgba(255,255,255,0.3);
+        }
+
+        .card-effect {
+            font-size: clamp(0.8rem, 2vw, 0.9rem);
+            color: #b8b8b8;
+            line-height: 1.4;
+            margin-top: 8px;
+            font-style: italic;
+        }
+
+        .combos-section {
+            margin-top: 30px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+            padding: 20px;
+            border: 2px solid #ffd700;
+        }
+
+        .combos-header {
+            font-size: clamp(1.2rem, 3.5vw, 1.6rem);
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #ffd700;
+        }
+
+        .combo-category {
+            margin-bottom: 20px;
+        }
+
+        .combo-category h3 {
+            font-size: clamp(1rem, 2.5vw, 1.2rem);
+            margin-bottom: 15px;
+            color: #ffdd88;
+        }
+
+        .combo {
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-left: 4px solid #ffd700;
+        }
+
+        .combo-cards {
+            font-weight: bold;
+            color: #ffd700;
+            margin-bottom: 5px;
+        }
+
+        .combo-description {
+            font-size: 0.9rem;
+            color: #ccc;
+            line-height: 1.4;
+        }
+
+        .reset-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: linear-gradient(45deg, #ff4444, #ff6666);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .reset-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+        }
+
+        .bakunawa .card {
+            border-left: 4px solid #2a5298;
+        }
+
+        .tribesmen .card {
+            border-left: 4px solid #cd853f;
+        }
+
+        @media (max-width: 768px) {
+            .cards-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .faction-selector {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .faction-btn {
+                width: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🐉 Bakunawa vs Tribesmen ⚔️</h1>
+        <p class="subtitle">Card Tracker & Combo Guide</p>
+    </div>
+
+    <div class="faction-selector">
+        <button class="faction-btn bakunawa active" onclick="showFaction('bakunawa')">
+            🌊 Bakunawa Cards
+        </button>
+        <button class="faction-btn tribesmen" onclick="showFaction('tribesmen')">
+            ⚔️ Tribesmen Cards
+        </button>
+    </div>
+
+    <!-- Bakunawa Cards -->
+    <div id="bakunawa-cards" class="cards-container active bakunawa">
+        <div class="card-category">
+            <div class="category-header">
+                <span class="category-icon">🌊</span>
+                <span>Attack Cards (5)</span>
+            </div>
+            <div class="cards-grid">
+                <div class="card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-name">LUNAR DEVASTATION</div>
+                        <div class="card-stats">
+                            <div class="energy-cost">4</div>
+                            <div class="attack-power">12</div>
+                        </div>
+                    </div>
+                    <div class="card-effect">If this card wins the round as a lone card, move Favor marker 1 additional space.</div>
+                </div>
+                
+                <div class="card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-name">DALUYON'S WRATH</div>
+                        <div class="card-stats">
+                            <div class="energy-cost">3</div>
+                            <div class="attack-power">9</div>
+                        </div>
+                    </div>
+                    <div class="card-effect">+1 Attack for each Defense card you played this round.</div>
+                </div>
+                
+                <div class="card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-name">DEEP SEA FURY</div>
+                        <div class="card-stats">
+                            <div class="energy-cost">3</div>
+                            <div class="attack-power">8</div>
+                        </div>
+                    </div>
+                    <div class="card-effect">+2 Attack if played after Round 5.</div>
+                </div>
+                
+                <div class="card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-name">SERPENT STRIKE</div>
+                        <div class="card-stats">
+                            <div class="energy-cost">2</div>
+                            <div class="attack-power">6</div>
+                        </div>
+                    </div>
+                    <div class="card-effect">+1 Attack for each card opponent played before this one in the current round.</div>
+                </div>
+                
+                <div class="card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-name">PRIMAL BITE</div>
+                        <div class="card-stats">
+                            <div class="energy-cost">1</div>
+                            <div class="attack-power">4</div>
+                        </div>
+                    </div>
+                    <div class="card-effect">No additional effect.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-category">
+            <div class="category-header">
+                <span class="category-icon">🐉</span>
+                <span>Defense Cards (5)</span>
+            </div>
+            <div class="cards-grid">
+                <div class="card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-name">ECLIPSE SHROUD</div>
+                        <div class="card-stats">
+                            <div class="energy-cost">3</div>
+                            <div class="attack-power">3</div>
+                        </div>
+                    </div>
+                    <div class="card-effect">Reduce opponent's total Attack by 4.</div>
+                </div>
+                
+                <div class="card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-name">ARMORED SCALES</div>
+                        <div class="card-stats">
+                            <div class="energy-cost">2</div>
+                            <div class="attack-power">4</div>
+                        </div>
+                    </div>
+                    <div class="card-effect">Reduce opponent's total Attack by 2. +1 Attack if the opponent has more cards than you.</div>
+                </div>
+                
+                <div class="card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-name">CRUSHING DEPTHS</div>
+                        <div class="card-stats">
+                            <div class="energy-cost">2</div>
+                            <div class="attack-power">2</div>
+                        </div>
+                    </div>
+                    <div class="card-effect">Reduce opponent's total Attack by 3.</div>
+                </div>
+                
+                <div class="card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-name">DRAGON'S RESILIENCE</div>
+                        <div class="card-stats">
+                            <div class="energy-cost">2</div>
+                            <div class="attack-power">5</div>
+                        </div>
+                    </div>
+                    <div class="card-effect">Reduce opponent's total Attack by 1.</div>
+                </div>
+                
+                <div class="card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-name">EVASIVE MANEUVER</div>
+                        <div class="card-stats">
+                            <div class="energy-cost">1</div>
+                            <div class="attack-power">2</div>
+                        </div>
+                    </div>
+                    <div class="card-effect">Reduce opponent's total Attack by 2.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-category">
+            <div class="category-header">
+                <span class="category-icon">⚡</span>
+                <span>Support Cards (5)</span>
+            </div>
+            <div class="cards-grid">
+                <div class="card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-name">ANCIENT RAGE</div>
+                        <div class="card-stats">
+                            <div class="energy-cost">3</div>
+                            <div class="attack-power">5</div>
+                        </div>
+                    </div>
+                    <div class="card-effect">+2 Attack to the next cards.</div>
+                </div>
+                
+                <div class="card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-name">OCEAN'S BLESSING</div>
+                        <div class="card-stats">
+                            <div class="energy-cost">3</div>
+                            <div class="attack-power">2</div>
+                        </div>
+                    </div>
+                    <div class="card-effect">Your next 2 cards this round get +2 Attack each.</div>
+                </div>
+                
+                <div class="card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-name">PREDATOR'S INSTINCT</div>
+                        <div class="card-stats">
+                            <div class="energy-cost">2</div>
+                            <div class="attack-power">4</div>
+                        </div>
+                    </div>
+                    <div class="card-effect">Reveal one of the opponent's playing cards.</div>
+                </div>
+                
+                <div class="card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-name">TIDAL PULL</div>
+                        <div class="card-stats">
+                            <div class="energy-cost">2</div>
+                            <div class="attack-power">6</div>
+                        </div>
+                    </div>
+                    <div class="card-effect">If you win this round, the opponent discards 1 random card.</div>
+                </div>
+                
+                <div class="card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-name">DRACONIC PATIENCE</div>
+                        <div class="card-stats">
+                            <div class="energy-cost">1</div>
+                            <div class="attack-power">3</div>
+                        </div>
+                    </div>
+                    <div class="card-effect">If you have 5 or fewer cards left after this round, the opponent must discard 1 card of their choice from their hand.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tribesmen Cards -->
+    <div id="tribesmen-cards" class="cards-container tribesmen">
+        <div class="card-category">
+            <div class="category-header">
+                <span class="category-icon">⚔️</span>
+                <span>Attack Cards (5)</span>
+            </div>
+            <div class="cards-grid">
+                <div class="card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-name">BAYANIHAN STRIKE</div>
+                        <div class="card-stats">
+                            <div class="energy-cost">4</div>
+                            <div class="attack-power">11</div>
+                        </div>
+                    </div>
+                    <div class="card-effect">+2 Attack for each different card type you played this round.</div>
+                </div>
+                
+                <div class="card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-name">SPEAR OF MAYARI</div>
+                        <div class="card-stats">
+                            <div class="energy-cost">3</div>
+                            <div class="attack-power">9</div>
+                        </div>
+                    </div>
+                    <div class="card-effect">+3 Attack if any Support card was played this round.</div>
+                </div>
+                
+                <div class="card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-name">SANDUGO ASSAULT</div>
+                        <div class="card-stats">
+                            <div class="energy-cost">3</div>
+                            <div class="attack-power">8</div>
+                        </div>
+                    </div>
+                    <div class="card-effect">+1 Attack for each Tribesmen card played this round.</div>
+                </div>
+                
+                <div class="card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-name">DATU'S FIRST BLOW</div>
+                        <div class="card-stats">
+                            <div class="energy-cost">2</div>
+                            <div class="attack-power">7</div>
+                        </div>
+                    </div>
+                    <div class="card-effect">+2 Attack if played as your first card.</div>
+                </div>
+                
+                <div class="card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-name">MATULIS SPEAR JAB</div>
+                        <div class="card-stats">
+                            <div class="energy-cost">1</div>
+                            <div class="attack-power">5</div>
+                        </div>
+                    </div>
+                    <div class="card-effect">No additional effect.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-category">
+            <div class="category-header">
+                <span class="category-icon">🛡️</span>
+                <span>Defense Cards (5)</span>
+            </div>
+            <div class="cards-grid">
+                <div class="card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-name">PALAYOK NOISE</div>
+                        <div class="card-stats">
+                            <div class="energy-cost">3</div>
+                            <div class="attack-power">2</div>
+                        </div>
+                    </div>
+                    <div class="card-effect">Reduce opponent's total Attack by 5.</div>
+                </div>
+                
+                <div class="card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-name">AGONG WARBEAT</div>
+                        <div class="card-stats">
+                            <div class="energy-cost">2</div>
+                            <div class="attack-power">4</div>
+                        </div>
+                    </div>
+                    <div class="card-effect">Reduce opponent's total Attack by 3. Draw the top card from the discard pile if you lose this round.</div>
+                </div>
+                
+                <div class="card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-name">SIGAW NG BAYAN</div>
+                        <div class="card-stats">
+                            <div class="energy-cost">2</div>
+                            <div class="attack-power">3</div>
+                        </div>
+                    </div>
+                    <div class="card-effect">Reduce opponent's total Attack by 1 for each card you played this round.</div>
+                </div>
+                
+                <div class="card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-name">KAL-ASAG STANCE</div>
+                        <div class="card-stats">
+                            <div class="energy-cost">2</div>
+                            <div class="attack-power">5</div>
+                        </div>
+                    </div>
+                    <div class="card-effect">Reduce opponent's total Attack by 2.</div>
+                </div>
+                
+                <div class="card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-name">ANITO CHANT</div>
+                        <div class="card-stats">
+                            <div class="energy-cost">1</div>
+                            <div class="attack-power">3</div>
+                        </div>
+                    </div>
+                    <div class="card-effect">Reduce opponent's total Attack by 2.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-category">
+            <div class="category-header">
+                <span class="category-icon">✨</span>
+                <span>Support Cards (5)</span>
+            </div>
+            <div class="cards-grid">
+                <div class="card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-name">BLESSING NI MAYARI</div>
+                        <div class="card-stats">
+                            <div class="energy-cost">3</div>
+                            <div class="attack-power">4</div>
+                        </div>
+                    </div>
+                    <div class="card-effect">Gain +2 Attack for every card you played this round.</div>
+                </div>
+                
+                <div class="card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-name">ALAY TO BATHALA</div>
+                        <div class="card-stats">
+                            <div class="energy-cost">3</div>
+                            <div class="attack-power">1</div>
+                        </div>
+                    </div>
+                    <div class="card-effect">Choose: Gain +4 Attack to all your cards this round OR reduce opponent's Attack by 6.</div>
+                </div>
+                
+                <div class="card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-name">KUDYAPI RHYTHM</div>
+                        <div class="card-stats">
+                            <div class="energy-cost">2</div>
+                            <div class="attack-power">5</div>
+                        </div>
+                    </div>
+                    <div class="card-effect">If you played 3+ cards this round, gain +1 Attack for every card you played.</div>
+                </div>
+                
+                <div class="card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-name">GABAYAN NG NINUNO</div>
+                        <div class="card-stats">
+                            <div class="energy-cost">2</div>
+                            <div class="attack-power">3</div>
+                        </div>
+                    </div>
+                    <div class="card-effect">Force your opponent to reveal their hand.</div>
+                </div>
+                
+                <div class="card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-name">ELDER'S KUWENTO</div>
+                        <div class="card-stats">
+                            <div class="energy-cost">1</div>
+                            <div class="attack-power">2</div>
+                        </div>
+                    </div>
+                    <div class="card-effect">Gain +2 Attack this round.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Combos Section -->
+    <div class="combos-section">
+        <div class="combos-header">🔗 Suggested Combos</div>
+        
+        <div class="combo-category">
+            <h3>🌊 Bakunawa Combos</h3>
+            
+            <div class="combo">
+                <div class="combo-cards">Ocean's Blessing → Deep Sea Fury (after Round 5) → Lunar Devastation</div>
+                <div class="combo-description">Massive late-game finisher. Ocean's Blessing buffs both big attacks.</div>
+            </div>
+            
+            <div class="combo">
+                <div class="combo-cards">Predator's Instinct → Serpent Strike → Ancient Rage</div>
+                <div class="combo-description">Peek at their card, punish with Serpent Strike, then boost all attacks.</div>
+            </div>
+            
+            <div class="combo">
+                <div class="combo-cards">Eclipse Shroud → Tidal Pull → Primal Bite</div>
+                <div class="combo-description">Shut down their score, force a discard, then chip damage to win the round.</div>
+            </div>
+            
+            <div class="combo">
+                <div class="combo-cards">Ancient Rage → Daluyon's Wrath → Armored Scales</div>
+                <div class="combo-description">Rage buffs Wrath, while Scales helps control the opponent's score.</div>
+            </div>
+            
+            <div class="combo">
+                <div class="combo-cards">Draconic Patience → Lunar Devastation</div>
+                <div class="combo-description">Patience forces a discard if you're running low → then drop the ultimate attack.</div>
+            </div>
+            
+            <div class="combo">
+                <div class="combo-cards">Evasive Maneuver → Serpent Strike → Deep Sea Fury</div>
+                <div class="combo-description">Dodge damage, then counter with quick and late-round power.</div>
+            </div>
+        </div>
+        
+        <div class="combo-category">
+            <h3>🛡️ Tribesmen Combos</h3>
+            
+            <div class="combo">
+                <div class="combo-cards">Blessing ni Mayari → Sandugo Assault → Bayanihan Strike</div>
+                <div class="combo-description">Classic full-tribe synergy for huge attack values.</div>
+            </div>
+            
+            <div class="combo">
+                <div class="combo-cards">Datu's First Blow → Spear of Mayari → Kudyapi Rhythm</div>
+                <div class="combo-description">Start strong, follow with spear buff, then reward multiple plays.</div>
+            </div>
+            
+            <div class="combo">
+                <div class="combo-cards">Agong Warbeat → Alay to Bathala (−6) → Bayanihan Strike</div>
+                <div class="combo-description">Defensive disruption into a heavy finisher.</div>
+            </div>
+            
+            <div class="combo">
+                <div class="combo-cards">Gabayan ng Ninuno → Spear of Mayari → Matulis Spear Jab</div>
+                <div class="combo-description">Reveal opponent's hand, then safely stack attacks knowing what's coming.</div>
+            </div>
+            
+            <div class="combo">
+                <div class="combo-cards">Sigaw ng Bayan → Kal-asag Stance → Sandugo Assault</div>
+                <div class="combo-description">Reduce their score multiple times, then swing with tribe boost.</div>
+            </div>
+            
+            <div class="combo">
+                <div class="combo-cards">Elder's Kuwento → Palayok Noise → Datu's First Blow</div>
+                <div class="combo-description">Extra defense + massive opponent penalty, followed by a strong opener.</div>
+            </div>
+        </div>
+    </div>
+
+    <button class="reset-btn" onclick="resetAllCards()" title="Reset All Cards">
+        🔄
+    </button>
+
+    <script>
+        function showFaction(faction) {
+            // Hide all containers
+            document.querySelectorAll('.cards-container').forEach(container => {
+                container.classList.remove('active');
+            });
+            
+            // Remove active class from all buttons
+            document.querySelectorAll('.faction-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected container and activate button
+            document.getElementById(faction + '-cards').classList.add('active');
+            document.querySelector('.faction-btn.' + faction).classList.add('active');
+        }
+
+        function toggleCard(cardElement) {
+            cardElement.classList.toggle('crossed-out');
+            
+            // Add a small vibration effect on mobile
+            if (navigator.vibrate) {
+                navigator.vibrate(50);
+            }
+        }
+
+        function resetAllCards() {
+            document.querySelectorAll('.card').forEach(card => {
+                card.classList.remove('crossed-out');
+            });
+            
+            // Confirmation feedback
+            if (navigator.vibrate) {
+                navigator.vibrate([100, 50, 100]);
+            }
+        }
+
+        function scrollToSection(sectionId) {
+            const element = document.getElementById(sectionId);
+            if (element) {
+                element.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'start' 
+                });
+                
+                // Highlight the section briefly
+                const categoryElement = element.closest('.card-category') || element.closest('.combos-section');
+                if (categoryElement) {
+                    categoryElement.style.boxShadow = '0 0 20px rgba(255, 215, 0, 0.5)';
+                    setTimeout(() => {
+                        categoryElement.style.boxShadow = '';
+                    }, 2000);
+                }
+            }
+        }
+
+        function resetCurrentFaction() {
+            const activeFaction = document.querySelector('.cards-container.active');
+            if (activeFaction) {
+                activeFaction.querySelectorAll('.card').forEach(card => {
+                    card.classList.remove('crossed-out');
+                });
+                
+                if (navigator.vibrate) {
+                    navigator.vibrate(100);
+                }
+            }
+        }
+
+        function toggleAllCards() {
+            const activeFaction = document.querySelector('.cards-container.active');
+            if (activeFaction) {
+                const cards = activeFaction.querySelectorAll('.card');
+                const crossedOutCount = activeFaction.querySelectorAll('.card.crossed-out').length;
+                
+                // If more than half are crossed out, uncross all; otherwise cross all
+                if (crossedOutCount > cards.length / 2) {
+                    cards.forEach(card => card.classList.remove('crossed-out'));
+                } else {
+                    cards.forEach(card => card.classList.add('crossed-out'));
+                }
+                
+                if (navigator.vibrate) {
+                    navigator.vibrate([50, 30, 50]);
+                }
+            }
+        }
+
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'r' && e.ctrlKey) {
+                e.preventDefault();
+                resetAllCards();
+            }
+            if (e.key === '1' && e.ctrlKey) {
+                e.preventDefault();
+                showFaction('bakunawa');
+            }
+            if (e.key === '2' && e.ctrlKey) {
+                e.preventDefault();
+                showFaction('tribesmen');
+            }
+        });
+
+        // Add touch feedback for better mobile experience
+        document.querySelectorAll('.card').forEach(card => {
+            card.addEventListener('touchstart', function() {
+                this.style.transform = 'scale(0.98)';
+            });
+            
+            card.addEventListener('touchend', function() {
+                this.style.transform = '';
+            });
+        });
+    </script>
+</body>
+</html>
